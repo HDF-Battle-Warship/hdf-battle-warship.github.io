@@ -269,15 +269,44 @@ function pickLang(){
   }
   return "en";
 }
+const ZONES=[
+ ["Pacific/Honolulu","Hawaii"],["America/Anchorage","Alaska"],
+ ["America/Los_Angeles","Los Angeles, Vancouver"],["America/Denver","Denver, Phoenix"],
+ ["America/Mexico_City","Mexico City"],["America/Chicago","Chicago, Dallas"],
+ ["America/New_York","New York, Toronto, Miami"],["America/Bogota","Bogotá, Lima, Quito"],
+ ["America/Caracas","Caracas, La Paz"],["America/Santiago","Santiago"],
+ ["America/Sao_Paulo","São Paulo, Rio"],["America/Argentina/Buenos_Aires","Buenos Aires, Montevideo"],
+ ["Europe/London","London, Lisbon, Dublin"],["Africa/Lagos","Lagos, Kinshasa, Algiers"],
+ ["Europe/Berlin","Berlin, Paris, Rome, Madrid"],["Africa/Johannesburg","Johannesburg, Harare"],
+ ["Africa/Cairo","Cairo"],["Europe/Athens","Athens, Kyiv, Bucharest"],
+ ["Europe/Istanbul","Istanbul"],["Europe/Moscow","Moscow"],
+ ["Asia/Riyadh","Riyadh, Baghdad, Kuwait"],["Africa/Nairobi","Nairobi, Addis Ababa"],
+ ["Asia/Tehran","Tehran"],["Asia/Dubai","Dubai, Abu Dhabi"],
+ ["Asia/Karachi","Karachi, Tashkent"],["Asia/Kolkata","India, Sri Lanka"],
+ ["Asia/Kathmandu","Kathmandu"],["Asia/Dhaka","Dhaka"],["Asia/Yangon","Myanmar"],
+ ["Asia/Bangkok","Bangkok, Jakarta, Vietnam, Cambodia"],
+ ["Asia/Shanghai","China, Taiwan, Hong Kong"],["Asia/Singapore","Singapore, Malaysia, Manila"],
+ ["Australia/Perth","Perth"],["Asia/Tokyo","Tokyo, Seoul"],
+ ["Australia/Adelaide","Adelaide"],["Australia/Brisbane","Brisbane"],
+ ["Australia/Sydney","Sydney, Melbourne"],["Pacific/Auckland","Auckland"]
+];
+function tzOffset(z){
+  try{
+    const p=new Intl.DateTimeFormat("en-US",{timeZone:z,timeZoneName:"shortOffset"}).formatToParts(Date.now()).find(x=>x.type==="timeZoneName").value;
+    const m=p.match(/GMT([+-])(\d+)(?::(\d+))?/);
+    if(!m) return {txt:"UTC±0",min:0};
+    const min=(m[1]==="-"?-1:1)*(parseInt(m[2])*60+(m[3]?parseInt(m[3]):0));
+    return {txt:"UTC"+m[1]+m[2]+(m[3]?":"+m[3]:""),min};
+  }catch(e){ return {txt:"",min:0}; }
+}
 function buildTz(){
   const sel=$("tz"); sel.innerHTML="";
-  const add=(v,txt,parent)=>{const o=document.createElement("option");o.value=v;o.textContent=txt;(parent||sel).appendChild(o);};
+  const add=(v,txt)=>{const o=document.createElement("option");o.value=v;o.textContent=txt;sel.appendChild(o);};
   let mine="UTC"; try{ mine=Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC"; }catch(e){}
-  add("UTC","⚓ "+t("tzGame")+" (UTC)");
-  add("Europe/Berlin","🇩🇪 "+t("tzDe"));
-  if(mine!=="UTC"&&mine!=="Europe/Berlin") add(mine,"📍 "+mine.replace(/_/g," "));
-  let all=[]; try{ all=Intl.supportedValuesOf("timeZone"); }catch(e){ all=["America/Los_Angeles","America/New_York","America/Sao_Paulo","Europe/London","Europe/Paris","Europe/Moscow","Africa/Lagos","Africa/Johannesburg","Asia/Dubai","Asia/Kolkata","Asia/Bangkok","Asia/Jakarta","Asia/Shanghai","Asia/Manila","Asia/Tokyo","Asia/Seoul","Australia/Sydney","Pacific/Auckland"]; }
-  const g=document.createElement("optgroup"); g.label="—"; all.forEach(z=>add(z,z.replace(/_/g," "),g)); sel.appendChild(g);
+  add("UTC","⚓ "+t("tzGame")+" (UTC±0)");
+  const list=ZONES.map(([z,l])=>{const o=tzOffset(z);return {z,l,o};}).sort((a,b)=>a.o.min-b.o.min);
+  if(mine!=="UTC" && !ZONES.some(([z])=>z===mine)){ const o=tzOffset(mine); add(mine,"📍 "+o.txt+" · "+mine.split("/").pop().replace(/_/g," ")); }
+  list.forEach(x=>add(x.z,(x.z===mine?"📍 ":"")+x.o.txt+" · "+x.l));
   const saved=store.get("tz"); TZ = saved || mine;
   sel.value=TZ; if(sel.value!==TZ){ TZ="UTC"; sel.value="UTC"; }
 }
